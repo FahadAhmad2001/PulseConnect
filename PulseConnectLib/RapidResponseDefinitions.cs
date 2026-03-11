@@ -3,10 +3,7 @@
     internal class RapidResponseDefinitions
     {
     }
-    public class RapidResponseEvent
-    {
-
-    }
+    
     
     
 }
