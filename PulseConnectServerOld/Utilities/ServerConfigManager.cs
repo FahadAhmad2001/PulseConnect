@@ -6,7 +6,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using ProtoBuf;
 using PulseConnectLib.Definitions.Entities;
 
-namespace PulseConnectServer.Utilities
+namespace PulseConnectServerOld.Utilities
 {
     public static class ServerConfigManager
     {

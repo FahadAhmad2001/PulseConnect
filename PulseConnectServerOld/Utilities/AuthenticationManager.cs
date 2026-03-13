@@ -9,12 +9,12 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Linq;
 using System.Data.SqlTypes;
-using PulseConnectServer.Utilities.DatabaseContexts;
-using System.Collections.Concurrent;
+using PulseConnectServerOld.Utilities.DatabaseContexts;
 
-namespace PulseConnectServer.Utilities
+
+namespace PulseConnectServerOld.Utilities
 {
-    public class AuthenticationManager : IAuthenticationManager
+    public static class AuthenticationManager
     {
         public static bool IsModifyingUsersList = false;
         public static bool IsModifyingStandaloneusersList = false;
@@ -23,108 +23,68 @@ namespace PulseConnectServer.Utilities
         private const int DegreeOfParallelism = 8; // Number of threads to use
         private const int Iterations = 4; // Number of iterations
         private const int MemorySize = 65536; // 1 GB
-        private static DbContextOptionsBuilder<IntegratedServerUsersDBContext> IntegratedUsersDBOptions;
-        private static DbContextOptionsBuilder<StandAloneRRTMembersDBContext> StandaloneUsersDBOptions;
-
-        public ConcurrentBag<User> AllCurrentUsersList { get; set; }
-        public ConcurrentBag<User> AllCurrentStandaloneUsersList { get; set; }
-        private Dictionary<string, string> UserSessions { get; set; }
-        private Dictionary<string, string> StandaloneUserSessions { get; set; }
-       // private readonly IntegratedServerUsersDBContext integratedDB;
-       // private readonly StandAloneRRTMembersDBContext standaloneDB;
-        private readonly IServiceScopeFactory _scopeFactory;
-
-        public AuthenticationManager(IServiceScopeFactory scopeFactory)
+        public static List<User> AllCurrentUsersList { get; set; }
+        public static List<User> AllCurrentStandaloneUsersList { get; set; }
+        private static Dictionary<string,string> UserSessions { get; set; }
+        private static Dictionary <string,string> StandaloneUserSessions { get; set; }
+        public static async Task LoadUserDetails()
         {
-            //integratedDB = integratedUsersDBContext;
-            //standaloneDB = standaloneUsersDBContext;
-            UserSessions = new Dictionary<string, string>();
-            StandaloneUserSessions = new Dictionary<string, string>();
-            _scopeFactory = scopeFactory;
-            using(IServiceScope scope = _scopeFactory.CreateScope())
-            {
-                IntegratedServerUsersDBContext integratedDB = scope.ServiceProvider.GetRequiredService<IntegratedServerUsersDBContext>();
-                AllCurrentUsersList = [.. integratedDB.AllServerUsers.ToList()];
-                StandAloneRRTMembersDBContext standaloneDB = scope.ServiceProvider.GetRequiredService<StandAloneRRTMembersDBContext>();
-                AllCurrentStandaloneUsersList = [.. standaloneDB.ListOfStandaloneUsers.ToList()];
-
-            }
-            //AllCurrentStandaloneUsersList = standaloneDB.ListOfStandaloneUsers.ToList();
-            //AllCurrentUsersList=integratedDB.AllServerUsers.ToList();
-        }
-
-        public async Task<IEnumerable<User>> GetUsersFromMemory()
-        {
-            return AllCurrentUsersList;
-        }
-
-        public async Task<IEnumerable<User>> GetStandAloneUsersFromMemory()
-        {
-            return AllCurrentStandaloneUsersList;
-        }
-
-        /*public async Task LoadUserDetails()
-        {
-            string connectionString = "server=127.0.0.1;port=9000;user=root;password=secret;Database=testing_combined_database;";
-            IntegratedUsersDBOptions = new DbContextOptionsBuilder<IntegratedServerUsersDBContext>();
-            IntegratedUsersDBOptions.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
-            connectionString = "server=127.0.0.1;port=9000;user=root;password=secret;Database=testing_standalone_database;";
-            StandaloneUsersDBOptions = new DbContextOptionsBuilder<StandAloneRRTMembersDBContext>();
-            IntegratedUsersDBOptions.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
-            using (StandAloneRRTMembersDBContext dbContext = new StandAloneRRTMembersDBContext(StandaloneUsersDBOptions.Options))
+            using (StandAloneRRTMembersDBContext dbContext = new StandAloneRRTMembersDBContext())
             {
                 await dbContext.Database.EnsureCreatedAsync();
-                AllCurrentStandaloneUsersList = await dbContext.ListOfStandaloneUsers.ToListAsync();
+                AllCurrentStandaloneUsersList =  await dbContext.ListOfStandaloneUsers.ToListAsync();
             }
-            
-            using (IntegratedServerUsersDBContext dbContext = new IntegratedServerUsersDBContext(IntegratedUsersDBOptions.Options))
+            using (IntegratedServerUsersDBContext dbContext = new IntegratedServerUsersDBContext())
             {
                 await dbContext.Database.EnsureCreatedAsync();
                 AllCurrentUsersList = await dbContext.AllServerUsers.ToListAsync();
             }
-            Log.AddLog("==========LISTING INTEGRATED USERS==========", LogLevel.Debug);
-            foreach (User eachuser in AllCurrentUsersList)
+            Log.AddLog("==========LISTING INTEGRATED USERS==========",LogLevel.Debug);
+            foreach(User eachuser in AllCurrentUsersList)
             {
                 //for production dont write passwords to log
-                Log.AddLog("Adding existing user from file with username: (" + eachuser.UserName +
-                    ") hashed password: (" + eachuser.HashedPassword + ") designation: (" + eachuser.UserType.ToString() +
-                    " and creation date as " + eachuser.TimeUserCreated.ToString() +
-                    " and current session ID " + eachuser.CurrentSessionID + " and current session expiry " +
+                Log.AddLog("Adding existing user from file with username: (" + eachuser.UserName + 
+                    ") hashed password: (" + eachuser.HashedPassword + ") designation: (" + eachuser.UserType.ToString() +  
+                    " and creation date as " + eachuser.TimeUserCreated.ToString() + 
+                    " and current session ID " + eachuser.CurrentSessionID + " and current session expiry " + 
                     eachuser.SessionExpiry, LogLevel.Info);
             }
             Log.AddLog("==========LISTING STANDALONE RRT USERS==========", LogLevel.Debug);
             foreach (User eachuser in AllCurrentStandaloneUsersList)
             {
                 //for production dont write passwords to log
-                Log.AddLog("Adding existing standalone user from file with username: (" + eachuser.UserName +
-                    ") hashed password: (" + eachuser.HashedPassword + ") designation: (" + eachuser.UserType.ToString() +
-                    " and creation date as " + eachuser.TimeUserCreated.ToString() + " and current session ID " +
+                Log.AddLog("Adding existing standalone user from file with username: (" + eachuser.UserName + 
+                    ") hashed password: (" + eachuser.HashedPassword + ") designation: (" + eachuser.UserType.ToString() + 
+                    " and creation date as " + eachuser.TimeUserCreated.ToString() + " and current session ID " + 
                     eachuser.CurrentSessionID + " and current session expiry " + eachuser.SessionExpiry, LogLevel.Info);
             }
-            
-        }*/
-
-        public async Task<IEnumerable<User>> GetIntegratedUsersAsync()
-        {
-            using (IServiceScope scope = _scopeFactory.CreateScope())
-            {
-                IntegratedServerUsersDBContext integratedDB = scope.ServiceProvider.GetRequiredService<IntegratedServerUsersDBContext>();
-                AllCurrentUsersList = [.. integratedDB.AllServerUsers.ToList()];
-            }
-            return AllCurrentUsersList;
+            UserSessions = new Dictionary<string, string>();
+            StandaloneUserSessions = new Dictionary<string, string>();
         }
 
-        public async Task<IEnumerable<User>> GetStandaloneUsersAsync()
+        public static async Task<List<User>> GetAllUsersListAsync()
         {
-            using (IServiceScope scope = _scopeFactory.CreateScope())
+            List<User> CompleteUsersList = new List<User>();
+            using (IntegratedServerUsersDBContext dbContext = new IntegratedServerUsersDBContext())
             {
-                StandAloneRRTMembersDBContext standaloneDB = scope.ServiceProvider.GetRequiredService<StandAloneRRTMembersDBContext>();
-                AllCurrentStandaloneUsersList = [.. standaloneDB.ListOfStandaloneUsers.ToList()];
+                CompleteUsersList = await dbContext.AllServerUsers.ToListAsync();
             }
-            return AllCurrentStandaloneUsersList;
+            AllCurrentUsersList = CompleteUsersList;
+            return CompleteUsersList;
         }
 
-        public async Task<UserSessionDetails> AddNewUserAync(string usrname, string passwd, ProviderClass usrType, bool StartRRT, bool ReceiveRRT, string grpID, bool CanTransShift)
+        public static async Task<List<User>> GetAllStandaloneUsersListAsync()
+        {
+            List<User> CompleteUsersList = new List<User>();
+            using(StandAloneRRTMembersDBContext dbContext = new StandAloneRRTMembersDBContext())
+            {
+                CompleteUsersList = await dbContext.ListOfStandaloneUsers.ToListAsync();
+            }
+            AllCurrentStandaloneUsersList= CompleteUsersList;
+            return CompleteUsersList;
+        }
+
+        public static async Task<UserSessionDetails> AddNewUserAsync(string usrname, string passwd, ProviderClass usrType, bool StartRRT, bool ReceiveRRT, string grpID, bool CanTransShift)
         {
         StartAddUser:
             if (IsModifyingUsersList)
@@ -133,7 +93,7 @@ namespace PulseConnectServer.Utilities
                 goto StartAddUser;
             }
             IsModifyingUsersList = true;
-            await GetIntegratedUsersAsync();
+            await GetAllUsersListAsync();
             foreach (User usr in AllCurrentUsersList)
             {
                 if (usrname == usr.UserName)
@@ -145,9 +105,9 @@ namespace PulseConnectServer.Utilities
             if (usrType == ProviderClass.Doctor)
             {
                 DoctorUser newUser = new DoctorUser();
-                Log.AddLog("Adding new user with username: (" + usrname + ") password: (" + passwd +
-                    ") designation: (" + usrType.ToString() + ") Start rapid responses set to " + StartRRT.ToString() +
-                    " and receive RR alerts set to " + ReceiveRRT.ToString() + " and group ID: (" + grpID.ToString() +
+                Log.AddLog("Adding new user with username: (" + usrname + ") password: (" + passwd + 
+                    ") designation: (" + usrType.ToString() + ") Start rapid responses set to " + StartRRT.ToString() + 
+                    " and receive RR alerts set to " + ReceiveRRT.ToString() + " and group ID: (" + grpID.ToString() + 
                     ") and ability to transfer shift as " + CanTransShift.ToString(), LogLevel.Info);
                 //for production releases dont write passwords to log
                 string HashedPass = HashPassword(passwd);
@@ -159,12 +119,11 @@ namespace PulseConnectServer.Utilities
                 List<string> guidLists = new List<string>();
                 guidLists.Add(grpID);
                 newUser.CreateNewDoctorUser(usrname, HashedPass, usrType, newSessionId.ToString(), NewSessionExp, DateTime.Now, StartRRT, ReceiveRRT, guidLists, CanTransShift);
-                using (IServiceScope scope = _scopeFactory.CreateScope())
+                using(IntegratedServerUsersDBContext dbContext = new IntegratedServerUsersDBContext())
                 {
-                    IntegratedServerUsersDBContext integratedDB = scope.ServiceProvider.GetRequiredService<IntegratedServerUsersDBContext>();
-                    await integratedDB.AllServerUsers.AddAsync(newUser);
-                    await integratedDB.SaveChangesAsync();
-                    AllCurrentUsersList.Add(newUser);
+                    await dbContext.AllServerUsers.AddAsync(newUser);
+                    await dbContext.SaveChangesAsync();
+                    AllCurrentUsersList=await dbContext.AllServerUsers.ToListAsync();
                 }
                 IsModifyingUsersList = false;
                 UserSessionDetails newUserDeets = new UserSessionDetails();
@@ -180,10 +139,10 @@ namespace PulseConnectServer.Utilities
             {
                 throw new Exception();
             }
-
+            
         }
 
-        public async Task<UserSessionDetails> AddNewStandaloneUserAync(string usrname, string passwd, ProviderClass usrType, bool StartRRT, bool ReceiveRRT, string grpID, bool CanTransShift)
+        public static async Task<UserSessionDetails> AddNewStandAloneUserAsync(string usrname, string passwd, ProviderClass usrType, bool StartRRT, bool ReceiveRRT, string grpID, bool CanTransShift)
         {
         StartAddSTAloneUser:
             if (IsModifyingStandaloneusersList)
@@ -192,7 +151,7 @@ namespace PulseConnectServer.Utilities
                 goto StartAddSTAloneUser;
             }
             IsModifyingStandaloneusersList = true;
-            await GetStandaloneUsersAsync();
+            await GetAllStandaloneUsersListAsync();
             foreach (User usr in AllCurrentStandaloneUsersList)
             {
                 if (usrname == usr.UserName)
@@ -218,12 +177,11 @@ namespace PulseConnectServer.Utilities
                 List<string> guidLists = new List<string>();
                 guidLists.Add(grpID);
                 newUser.CreateNewDoctorUser(usrname, HashedPass, usrType, newSessionId.ToString(), NewSessionExp, DateTime.Now, StartRRT, ReceiveRRT, guidLists, CanTransShift);
-                using (IServiceScope scope = _scopeFactory.CreateScope())
+                using (StandAloneRRTMembersDBContext dbContext = new StandAloneRRTMembersDBContext())
                 {
-                    StandAloneRRTMembersDBContext standaloneDB = scope.ServiceProvider.GetRequiredService<StandAloneRRTMembersDBContext>();
-                    await standaloneDB.ListOfStandaloneUsers.AddAsync(newUser);
-                    await standaloneDB.SaveChangesAsync();
-                    AllCurrentStandaloneUsersList.Add(newUser);
+                    await dbContext.ListOfStandaloneUsers.AddAsync(newUser);
+                    await dbContext.SaveChangesAsync();
+                    AllCurrentUsersList = await dbContext.ListOfStandaloneUsers.ToListAsync();
                 }
                 IsModifyingStandaloneusersList = false;
                 UserSessionDetails newUserDeets = new UserSessionDetails();
@@ -243,18 +201,18 @@ namespace PulseConnectServer.Utilities
 
         }
 
-        public async Task<UserSessionDetails> ValidateUserPassAsync(string username, string password)
+        public static async Task<UserSessionDetails> ValidateUserPassAsync(string username, string password)
         {
-            //await GetIntegratedUsersAsync();
+            await GetAllUsersListAsync();
             string HashedPass = HashPassword(password);
             bool foundCorrectUser = false;
             User correctUser = new User();
             int i = 0;
-            foreach (User eachuser in AllCurrentUsersList)
+            foreach(User eachuser in AllCurrentUsersList)
             {
                 if (eachuser.UserName == username)
                 {
-                    correctUser = eachuser;
+                    correctUser= eachuser;
                     foundCorrectUser = true;
                     byte[] combinedBytes = Convert.FromBase64String(eachuser.HashedPassword);
                     byte[] salt = new byte[SaltSize];
@@ -298,13 +256,13 @@ namespace PulseConnectServer.Utilities
                 //error code handling
                 throw new Exception();
             }
-
-
+            
+            
         }
 
-        public async Task<UserSessionDetails> ValidateStandaloneUserPassAsync(string username, string password)
+        public static async Task<UserSessionDetails> ValidateStandaloneUserPassAsync(string username, string password)
         {
-            await GetStandaloneUsersAsync();
+            await GetAllStandaloneUsersListAsync();
             string HashedPass = HashPassword(password);
             bool foundCorrectUser = false;
             User correctUser = new User();
@@ -343,7 +301,7 @@ namespace PulseConnectServer.Utilities
                 StandaloneUserSessions.Add(username, cookieID);
             }
             DateTime newExpiry = DateTime.Now.AddMonths(2);
-            if (await UpdateStandaloneUserSessionDetailsAsync(username, correctUser.CurrentSessionID, newExpiry))
+            if (UpdateStandaloneUserSessionDetailsAsync(username, correctUser.CurrentSessionID, newExpiry).Result)
             {
                 UserSessionDetails replyDetails = new UserSessionDetails();
                 replyDetails.SessionExpiry = newExpiry;
@@ -359,16 +317,16 @@ namespace PulseConnectServer.Utilities
             }
         }
 
-        public async Task<bool> ValidateUserCookieAsync(string username, string cookieID)
+        public static async Task<bool> ValidateUserCookieAsync(string username, string cookieID)
         {
             string correctCookieId = "aaa";
             if (UserSessions.ContainsKey(username))
             {
-                correctCookieId = UserSessions[username];
+                correctCookieId=UserSessions[username];
 
                 User correctUser = new User();
-                correctUser = AllCurrentUsersList.Where(x => x.UserName == username).FirstOrDefault();
-                if (correctUser != null)
+                correctUser = AllCurrentUsersList.Where(x=>x.UserName == username).FirstOrDefault();
+                if (correctUser!=null)
                 {
                     if ((correctCookieId == cookieID) && (correctUser.SessionExpiry > DateTime.Now))
                     {
@@ -380,7 +338,7 @@ namespace PulseConnectServer.Utilities
                     }
                 }
                 return false;
-
+                
             }
             else
             {
@@ -388,16 +346,16 @@ namespace PulseConnectServer.Utilities
             }
         }
 
-        public async Task<bool> ValidateStandaloneUserCookieAsync(string username, string cookieID)
+        public static async Task<bool> ValidateStandaloneUserCookieAsync(string username, string cookieID)
         {
             string correctCookieId = "aaa";
             if (StandaloneUserSessions.ContainsKey(username))
             {
-                correctCookieId = StandaloneUserSessions[username];
+                correctCookieId = UserSessions[username];
 
                 User correctUser = new User();
                 correctUser = AllCurrentStandaloneUsersList.Where(x => x.UserName == username).FirstOrDefault();
-                if (correctUser != default(User))
+                if (correctUser != null)
                 {
                     if ((correctCookieId == cookieID) && (correctUser.SessionExpiry > DateTime.Now))
                     {
@@ -417,18 +375,17 @@ namespace PulseConnectServer.Utilities
             }
         }
 
-        public async Task<bool> UpdateStandaloneUserSessionDetailsAsync(string username, string sessionID, DateTime newExpiry)
+        public static async Task<bool> UpdateStandaloneUserSessionDetailsAsync(string username, string sessionID, DateTime newExpiry)
         {
-            using (IServiceScope scope = _scopeFactory.CreateScope())
+            using (StandAloneRRTMembersDBContext dbContext = new StandAloneRRTMembersDBContext())
             {
-                StandAloneRRTMembersDBContext standaloneDB = scope.ServiceProvider.GetRequiredService<StandAloneRRTMembersDBContext>();
-                User correctUser = await standaloneDB.ListOfStandaloneUsers.FirstOrDefaultAsync(x => x.UserName == username);
+                User correctUser = await dbContext.ListOfStandaloneUsers.FirstOrDefaultAsync(x => x.UserName == username);
                 if (correctUser != null)
                 {
                     correctUser.CurrentSessionID = sessionID;
                     correctUser.SessionExpiry = newExpiry;
-                    await standaloneDB.SaveChangesAsync();
-                    await GetStandaloneUsersAsync();
+                    await dbContext.SaveChangesAsync();
+                    await GetAllUsersListAsync();
                     return true;
                 }
                 else
@@ -438,18 +395,17 @@ namespace PulseConnectServer.Utilities
             }
         }
 
-        public async Task<bool> UpdateUserSessionDetailsAsync(string username, string sessionID, DateTime newExpiry)
+        public static async Task<bool> UpdateUserSessionDetailsAsync(string username, string sessionID, DateTime newExpiry)
         {
-            using (IServiceScope scope = _scopeFactory.CreateScope())
+            using (IntegratedServerUsersDBContext dbContext = new IntegratedServerUsersDBContext())
             {
-                IntegratedServerUsersDBContext integratedDB = scope.ServiceProvider.GetRequiredService<IntegratedServerUsersDBContext>();
-                User correctUser = await integratedDB.AllServerUsers.FirstOrDefaultAsync(x => x.UserName == username);
-                if (correctUser != null)
+                User correctUser = await dbContext.AllServerUsers.FirstOrDefaultAsync(x => x.UserName == username);
+                if (correctUser!=null)
                 {
                     correctUser.CurrentSessionID = sessionID;
-                    correctUser.SessionExpiry = newExpiry;
-                    await integratedDB.SaveChangesAsync();
-                    await GetIntegratedUsersAsync();
+                    correctUser.SessionExpiry=newExpiry;
+                    await dbContext.SaveChangesAsync();
+                    await GetAllUsersListAsync();
                     return true;
                 }
                 else
@@ -459,10 +415,10 @@ namespace PulseConnectServer.Utilities
             }
         }
 
-        // public static UserSessionDetails ValidateUserByCookieID(string username, string cookieID)
-        // {
+       // public static UserSessionDetails ValidateUserByCookieID(string username, string cookieID)
+       // {
 
-        // }
+       // }
 
         private static string HashPassword(string password)
         {

@@ -6,14 +6,19 @@ using PulseConnectLib.Definitions.Entities;
 
 namespace PulseConnectServer.Utilities.DatabaseContexts
 {
-    public class IntegratedServerUsersDBContext : DbContext
+    public class IntegratedServerUsersDBContext(DbContextOptions<IntegratedServerUsersDBContext> options) : DbContext(options)
     {
         public DbSet<User> AllServerUsers { get; set; }
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            string connectionString = "server=127.0.0.1;port=9000;user=root;password=harnessedtech88;Database=testing_combined_database;";
-            var serverVersion = new MySqlServerVersion(new Version(8, 0, 29));
-            optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+            modelBuilder.HasDefaultSchema("Users");
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(IntegratedServerUsersDBContext).Assembly);
+            modelBuilder.Entity<User>()
+                .HasDiscriminator<string>("TypeOfUser")
+                .HasValue<DoctorUser>("DocUser")
+                .HasValue<NurseUser>("NurseUser");
+            base.OnModelCreating(modelBuilder);
         }
+       
     }
 }

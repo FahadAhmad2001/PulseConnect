@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="PulseConnectLib/PulseConnectLib.csproj" />
-  <Project Path="PulseConnectServer/PulseConnectServerOld.csproj" Id="54392d5a-a600-44a7-978e-559170f6d19f" />
+  <Project Path="PulseConnectServer/PulseConnectServer.csproj" Id="318df11b-3b2d-40f8-8e62-434fbb36ebfc" />
+  <Project Path="PulseConnectServerOld/PulseConnectServerOld.csproj" />
   <Project Path="RapidResponseApplication/RapidResponseApplication.csproj" Id="5a4be6a6-bf05-45ab-8756-c076124d1414" />
   <Project Path="RapidResponseServer/RapidResponseServer.csproj" Id="a0643f64-b274-4ae0-80d0-8f31313c712a" />
 </Solution>
