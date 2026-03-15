@@ -46,7 +46,10 @@ namespace PulseConnectServerOld
         static RapidResponseEvent GenerateEvent(string patname, RapidResponseEventType eventClass, DateTime eventCallTime, string eventMsg, string eventLoc, string caller, bool isRosc=false, int ttr = 0)
         {
             RapidResponseEvent newEvent = new RapidResponseEvent();
-            newEvent.CreateRapidResponseEvent(patname,eventClass,eventCallTime,eventMsg,eventLoc,caller);
+            WardBed location;
+            location.WardName = "aaa";
+            location.BedNumber = "12";
+            newEvent.CreateRapidResponseEvent(patname,eventClass,eventCallTime,eventMsg,eventLoc,caller,location);
         /*    newEvent.EventCallerGuid = caller;
             newEvent.EventGuid=Guid.NewGuid().ToString();
             newEvent.PatientCurrentLocationGuid = eventLoc;

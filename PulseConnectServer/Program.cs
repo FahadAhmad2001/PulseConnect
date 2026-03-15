@@ -3,6 +3,9 @@ using PulseConnectServer.Utilities.DatabaseContexts;
 using Scalar.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
+using PulseConnectServer.Utilities.Notifiers;
+using PulseConnectServer.Utilities.Services;
+
 public partial class Program
 {
     private static void Main(string[] args)
@@ -16,6 +19,9 @@ public partial class Program
 
         // Add services to the container.
         builder.Services.AddSingleton<IAuthenticationManager, AuthenticationManager>();
+        builder.Services.AddSingleton<StandaloneRapidEventsTrackingService>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<StandaloneRapidEventsTrackingService>());
+        builder.Services.AddScoped<IStandAloneRRTEventsManager, StandaloneRRTEventsManager>();
         builder.Services.AddControllers();
         builder.Services.AddDbContext<IntegratedServerUsersDBContext>(options =>
             options.UseMySql(builder.Configuration.GetConnectionString("IntegratedDBConnection"),
@@ -29,6 +35,7 @@ public partial class Program
         builder.Services.AddDbContext<StandAloneRRTEventsDBContext>(options =>
             options.UseMySql(builder.Configuration.GetConnectionString("StandaloneDBConnection"),
             ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("StandaloneDBConnection"))));
+        builder.Services.AddSignalR();
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
 
@@ -46,6 +53,8 @@ public partial class Program
         app.UseAuthorization();
 
         app.MapControllers();
+
+        app.MapHub<StandaloneRRTEventsNotifier>("api/standalone/events-listener");
 
         app.Run();
     }

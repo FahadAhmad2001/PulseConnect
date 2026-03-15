@@ -1,11 +1,16 @@
-﻿namespace PulseConnectServer.Utilities
+﻿using System.Reflection.Emit;
+
+namespace PulseConnectServer.Utilities
 {
     public static class Log
     {
         private static string LogFilePath = "aaaa";
         public static void StartLogging()
         {
-            LogFilePath = "logfile_" + DateTime.Now.Year.ToString() + "-" + DateTime.Now.Month.ToString() + "-" + DateTime.Now.Day.ToString() + "--" + DateTime.Now.Hour.ToString() + "-" + DateTime.Now.Minute.ToString() + "-" + DateTime.Now.Second.ToString() + "-" + DateTime.Now.Millisecond.ToString() + ".log";
+            LogFilePath = "logfile_" + DateTime.Now.Year.ToString() + "-" + DateTime.Now.Month.ToString() + "-" + DateTime.Now.Day.ToString() + 
+                "--" + DateTime.Now.Hour.ToString() + "-" + DateTime.Now.Minute.ToString() + "-" + DateTime.Now.Second.ToString() + 
+                "-" + DateTime.Now.Millisecond.ToString() + ".log";
+            File.AppendAllText(LogFilePath, "==============================================\n=============PULSECONNECT SERVER==============\n==============================================\n\n");
         }
         public static void AddLog(string message, LogLevel level)
         {

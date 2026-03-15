@@ -11,6 +11,15 @@ namespace PulseConnectServer.Utilities.DatabaseContexts
     {
         //public DbSet<MedicalEvent> MedicalEvents { get; set; }
         public DbSet<RapidResponseEvent> ListOfStandaloneEvents { get; set; }
-        
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            //base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<RapidResponseEvent>()
+                .ComplexProperty(u => u.PatientLocation, l =>
+                {
+                    l.Property(l => l.WardName).HasColumnName("PatientLocationWardName");
+                    l.Property(l => l.BedNumber).HasColumnName("PatientLocationBedNumber");
+                });
+        }
     }
 }

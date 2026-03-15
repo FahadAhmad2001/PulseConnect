@@ -10,7 +10,8 @@ namespace PulseConnectLib.Definitions.Events
         public bool RoscAchieved { get; set; }
         public RapidResponseEventType RRTEventType { get; set;  }
         public int TimeToRosc { get; set;  }
-        public void CreateRapidResponseEvent(string Patientid, RapidResponseEventType RapidType, DateTime RRTTime, string RRTDetails, string PatLoc, string CallerId, bool isRoscAchieved = false, int timeToRosc = 0) 
+        public WardBed PatientLocation { get; set; }
+        public string CreateRapidResponseEvent(string Patientid, RapidResponseEventType RapidType, DateTime RRTTime, string RRTDetails, string PatLoc, string CallerId, WardBed officialPatLoc, bool isRoscAchieved = false, int timeToRosc = 0) 
         {
             EventTime = RRTTime;
             PatientGuid = Patientid;
@@ -20,6 +21,7 @@ namespace PulseConnectLib.Definitions.Events
             RoscAchieved = isRoscAchieved;
             TimeToRosc = timeToRosc;
             EventCallerGuid = CallerId;
+            PatientLocation = officialPatLoc;
             if (RapidType == RapidResponseEventType.CardiacArrest)
             {
                 EventSeverity = MedEventSeverity.Arrest;
@@ -31,6 +33,7 @@ namespace PulseConnectLib.Definitions.Events
                 EventClass = MedEventType.RapidResponseOther;
             }
             EventGuid=Guid.NewGuid().ToString();
+            return EventGuid;
         }
         public void UpdateRoscStatus(bool roscAchieved, int timeToRosc)
         {
@@ -41,5 +44,10 @@ namespace PulseConnectLib.Definitions.Events
     public enum RapidResponseEventType
     {
         Tachycardia,Bradycardia,CardiacArrest
+    }
+    public struct WardBed
+    {
+        public string WardName {  get; set; }
+        public string BedNumber { get; set; }
     }
 }

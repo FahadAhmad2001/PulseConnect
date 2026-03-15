@@ -83,6 +83,7 @@ namespace PulseConnectServer.Controllers.AuthControllers
                 loginCookie.Expires = DateTimeOffset.UtcNow.AddMonths(2);
                 loginCookie.SameSite = SameSiteMode.Lax;
                 Response.Cookies.Append("clientSessionId", sessionDetails.CookieSessionID, loginCookie);
+                Response.Cookies.Append("clientUsername", sessionDetails.UserName, loginCookie);
                 return Ok(sessionDetails);
             }
             catch(UserDoesNotExistException ex)
@@ -105,15 +106,16 @@ namespace PulseConnectServer.Controllers.AuthControllers
         {
             _authenticationManager = authenticationManager;
         }
-        // GET: api/standalone/loginuserpass
+        // GET: api/standalone/loginuserpass`
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] LoginUserPassDTO userDetails)
+        public async Task<IActionResult> Post()
         {
             string cookieId = Request.Cookies["clientSessionId"];
-            if (userDetails == null || string.IsNullOrEmpty(cookieId)) return BadRequest("Wrong API format. cookie id is " + cookieId);
+            string clientUsername = Request.Cookies["clientUsername"];
+            if (string.IsNullOrEmpty(cookieId) || string.IsNullOrEmpty(clientUsername)) return BadRequest("Wrong API format. cookie id is " + cookieId);
             try
             {
-                bool isValidLogin = await _authenticationManager.ValidateStandaloneUserCookieAsync(userDetails.username, cookieId);
+                bool isValidLogin = await _authenticationManager.ValidateStandaloneUserCookieAsync(clientUsername, cookieId);
                 if (isValidLogin)
                 {
                     return Ok("Valid login details");
